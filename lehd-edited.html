@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.link {
+  fill: none;
+  stroke: #666;
+  stroke-width: 1.5px;
+}
+
+#licensing {
+  fill: green;
+}
+
+.link.GeneratedBy {
+  stroke: green;
+}
+
+.link.UsedBy {
+  stroke-dasharray: 0,2 1;
+}
+
+circle {
+  fill: #ccc;
+  stroke: #333;
+  stroke-width: 1.5px;
+}
+
+text {
+  font: 10px sans-serif;
+  pointer-events: none;
+  text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+}
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+// http://blog.thomsonreuters.com/index.php/mobile-patent-suits-graphic-of-the-day/
+var links = [
+        {source: "acspow", target: "gal", type: "UsedBy" }, 
+        {source: "ahs", target: "gal", type: "UsedBy" }, 
+        {source: "bls", target: "bls", type: "UsedBy" }, 
+        {source: "bls", target: "ecf", type: "UsedBy" }, 
+        {source: "bls", target: "ehf", type: "UsedBy" }, 
+        {source: "bls", target: "qwi", type: "UsedBy" }, 
+        {source: "bmf", target: "gal", type: "UsedBy" }, 
+        {source: "br", target: "brb", type: "UsedBy" }, 
+        {source: "br", target: "gal", type: "UsedBy" }, 
+        {source: "censas", target: "icf", type: "UsedBy" }, 
+        {source: "cpr", target: "icf", type: "UsedBy" }, 
+        {source: "ecf", target: "brb", type: "UsedBy" }, 
+        {source: "ecf", target: "edf", type: "UsedBy" }, 
+        {source: "ecf", target: "qwi", type: "UsedBy" }, 
+        {source: "ecf", target: "rdcru", type: "UsedBy" }, 
+        {source: "ecf", target: "spfru", type: "UsedBy" }, 
+        {source: "ecf", target: "u2w", type: "UsedBy" }, 
+        {source: "edf", target: "qwi", type: "UsedBy" }, 
+        {source: "edf", target: "u2w", type: "UsedBy" }, 
+        {source: "ehf", target: "ecf", type: "UsedBy" }, 
+        {source: "ehf", target: "edf", type: "UsedBy" }, 
+        {source: "ehf", target: "icf", type: "UsedBy" }, 
+        {source: "ehf", target: "qwi", type: "UsedBy" }, 
+        {source: "ehf", target: "spf", type: "UsedBy" }, 
+        {source: "ehf", target: "u2w", type: "UsedBy" }, 
+        {source: "es202", target: "ecf", type: "UsedBy" }, 
+        {source: "es202", target: "ehf", type: "UsedBy" }, 
+        {source: "es202", target: "es202", type: "UsedBy" }, 
+        {source: "es202", target: "gal", type: "UsedBy" }, 
+        {source: "es202", target: "spf", type: "UsedBy" }, 
+        {source: "exbls", target: "bls", type: "UsedBy" }, 
+        {source: "excpr", target: "cpr", type: "UsedBy" }, 
+        {source: "exes202", target: "es202", type: "UsedBy" }, 
+        {source: "exldb", target: "ldb", type: "UsedBy" }, 
+        {source: "exopm", target: "opm", type: "UsedBy" }, 
+        {source: "exuipik", target: "uipik", type: "UsedBy" }, 
+        {source: "exuissn", target: "uissn", type: "UsedBy" }, 
+        {source: "gal", target: "ecf", type: "UsedBy" }, 
+        {source: "icf", target: "qwi", type: "UsedBy" }, 
+        {source: "icf", target: "u2w", type: "UsedBy" }, 
+        {source: "lbdbr", target: "ecf", type: "UsedBy" }, 
+        {source: "ldb", target: "ecf", type: "UsedBy" }, 
+        {source: "maf", target: "cpr", type: "UsedBy" }, 
+        {source: "maf", target: "gal", type: "UsedBy" }, 
+        {source: "opm", target: "exopm", type: "UsedBy" }, 
+        {source: "pcf", target: "icf", type: "UsedBy" }, 
+        {source: "qwi", target: "qwipu", type: "UsedBy" }, 
+        {source: "qwi", target: "rdcru", type: "UsedBy" }, 
+        {source: "spf", target: "edf", type: "UsedBy" }, 
+        {source: "spf", target: "spfru", type: "UsedBy" }, 
+        {source: "tccb", target: "gal", type: "UsedBy" }, 
+        {source: "tiger", target: "cpr", type: "UsedBy" }, 
+        {source: "tiger", target: "icf", type: "UsedBy" }, 
+        {source: "u2w", target: "qwi", type: "UsedBy" }, 
+        {source: "uipik", target: "ehf", type: "UsedBy" }, 
+        {source: "uipik", target: "es202", type: "UsedBy" }
+];
+
+var nodes = {};
+
+// Compute the distinct nodes from the links.
+links.forEach(function(link) {
+  link.source = nodes[link.source] || (nodes[link.source] = {name: link.source});
+  link.target = nodes[link.target] || (nodes[link.target] = {name: link.target});
+});
+
+var width = 960,
+    height = 500;
+
+var force = d3.layout.force()
+    .nodes(d3.values(nodes))
+    .links(links)
+    .size([width, height])
+    .linkDistance(60)
+    .charge(-300)
+    .on("tick", tick)
+    .start();
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+// Per-type markers, as they don't inherit styles.
+svg.append("defs").selectAll("marker")
+    .data(["UsedBy", "GeneratedBy"])
+  .enter().append("marker")
+    .attr("id", function(d) { return d; })
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 15)
+    .attr("refY", -1.5)
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 6)
+    .attr("orient", "auto")
+  .append("path")
+    .attr("d", "M0,-5L10,0L0,5");
+
+var path = svg.append("g").selectAll("path")
+    .data(force.links())
+  .enter().append("path")
+    .attr("class", function(d) { return "link " + d.type; })
+    .attr("marker-end", function(d) { return "url(#" + d.type + ")"; });
+
+var circle = svg.append("g").selectAll("circle")
+    .data(force.nodes())
+  .enter().append("circle")
+    .attr("r", 10)
+    .call(force.drag);
+
+var text = svg.append("g").selectAll("text")
+    .data(force.nodes())
+  .enter().append("text")
+    .attr("x", 8)
+    .attr("y", ".31em")
+    .text(function(d) { return d.name; });
+
+// Use elliptical arc path segments to doubly-encode directionality.
+function tick() {
+  path.attr("d", linkArc);
+  circle.attr("transform", transform);
+  text.attr("transform", transform);
+}
+
+function linkArc(d) {
+  var dx = d.target.x - d.source.x,
+      dy = d.target.y - d.source.y,
+      dr = Math.sqrt(dx * dx + dy * dy);
+  return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
+}
+
+function transform(d) {
+  return "translate(" + d.x + "," + d.y + ")";
+}
+
+</script>
